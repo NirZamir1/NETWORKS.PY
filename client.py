@@ -6,10 +6,12 @@ SERVER_PORT = 5678
 
 # HELPER SOCKET METHODS
 
+print("Client started. Connecting to server...")
+
 
 def build_and_send_message(conn: socket.socket, code, data):
     """
-    Builds a new message using chatlib, wanted code and message. 
+    Builds a new message using chatlib, wanted code and message.
     Prints debug info, then sends it to the given socket.
     Paramaters: conn (socket object), code (str), data (str)
     Returns: Nothing
@@ -24,22 +26,26 @@ def recv_message_and_parse(conn: socket.socket):
     Recieves a new message from given socket,
     then parses the message using chatlib.
     Paramaters: conn (socket object)
-    Returns: cmd (str) and data (str) of the received message. 
+    Returns: cmd (str) and data (str) of the received message.
     If error occured, will return None, None
     """
     # Implement Code
     # ..
     try:
+        conn.settimeout(1)  # Set a timeout for receiving data
         data = ""
         while True:
             new_data = conn.recv(1024).decode('utf-8')
-            if not new_data:
+            print(f"Received data: {new_data}")
+            if len(new_data) == 0:
                 break
             data += new_data
 
-        cmd, data = chatlib.parse_message(data)
     except Exception as e:
-        return None, None
+        if not isinstance(e, socket.timeout):
+            return None, None
+    finally:
+        cmd, data = chatlib.parse_message(data)
     return cmd, data
 
 
@@ -49,7 +55,8 @@ def connect():
         soc.connect((SERVER_IP, SERVER_PORT))
 
     except socket.error as e:
-        error_and_exit(f"Error connecting to server: {e}")
+        error_and_exit(
+            f"Could not connect to server at {SERVER_IP}:{SERVER_PORT}. Error: {e}")
     finally:
         return soc
 
