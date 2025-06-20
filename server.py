@@ -9,7 +9,6 @@ import chatlib
 users = {}
 questions = {}
 logged_users = {}  # a dictionary of client hostnames to usernames - will be used later
-
 ERROR_MSG = "Error! "
 SERVER_PORT = 5678
 SERVER_IP = "127.0.0.1"
@@ -19,17 +18,29 @@ SERVER_IP = "127.0.0.1"
 
 def build_and_send_message(conn, code, msg):
     # copy from client
-
-    print("[SERVER] ", full_msg)	  # Debug print
+    message = chatlib.build_message(code, msg)
+    conn.sendall(message.encode())
+    print("[SERVER] ", message)	  # Debug print
 
 
 def recv_message_and_parse(conn):
     # copy from client
+    data = ""
+    while True:
+        try:
+            new_data = conn.recv(1024).decode('utf-8')
+            if len(new_data) == 0:
+                break
+            data += new_data
+        except Exception as e:
+            if not isinstance(e, socket.timeout):
+                send_error(conn, "Error receiving data from client.")
+                return None, None
+            else:
+                break
+    cmd, data = chatlib.parse_message(data)
+    return cmd, data
 
-    print("[CLIENT] ", full_msg)	  # Debug print
-
-
-# Data Loaders #
 
 def load_questions():
     """
@@ -70,6 +81,8 @@ def setup_socket():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((SERVER_IP, SERVER_PORT))
     sock.listen()
+    sock.settimeout(1)
+
     return sock
 
 
@@ -79,9 +92,8 @@ def send_error(conn: socket.socket, error_msg):
     Recieves: socket, message error string from called function
     Returns: None
     """
-    message = chatlib.build_message(
-        chatlib.PROTOCOL_SERVER["error_msg"], error_msg)
-    conn.sendall(message.encode())
+    build_and_send_message(
+        conn, chatlib.PROTOCOL_SERVER["error_msg"], f"{ERROR_MSG} {error_msg}")
 
 # MESSAGE HANDLING
 
@@ -91,15 +103,18 @@ def handle_getscore_message(conn, username):
     # Implement this in later chapters
 
 
-def handle_logout_message(conn):
+def handle_logout_message(conn: socket.socket):
     """
     Closes the given socket (in laster chapters, also remove user from logged_users dictioary)
     Recieves: socket
     Returns: None
     """
-    global logged_users
 
-    # Implement code ...
+    global logged_users
+    hostname = conn.getpeername()[0]
+    logged_users.pop(hostname)
+    conn.close()
+    print(f"[SERVER] Client {hostname} logged out and connection closed.")
 
 
 def handle_login_message(conn, data):
@@ -112,7 +127,25 @@ def handle_login_message(conn, data):
     global users  # This is needed to access the same users dictionary from all functions
     global logged_users	 # To be used later
 
-    # Implement code ...
+    username, password = chatlib.split_data(data, 2)
+
+    if username is None or password is None:
+        send_error(conn, "Invalid login data format.")
+        return
+
+    if username not in users:
+        send_error(conn, "Username does not exist.")
+        return
+
+    if users[username]["password"] != password:
+        send_error(conn, "Incorrect password.")
+        return
+
+    hostname = conn.getpeername()[0]
+    logged_users[hostname] = username
+    build_and_send_message(
+        conn, chatlib.PROTOCOL_SERVER["login_ok_msg"], "")
+    print(f"[SERVER] User {username} logged in")
 
 
 def handle_client_message(conn, cmd, data):
