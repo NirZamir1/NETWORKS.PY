@@ -23,25 +23,6 @@ def build_and_send_message(conn, code, msg):
     print("[SERVER] ", message)	  # Debug print
 
 
-def recv_message_and_parse(conn):
-    # copy from client
-    data = ""
-    while True:
-        try:
-            new_data = conn.recv(1024).decode('utf-8')
-            if len(new_data) == 0:
-                break
-            data += new_data
-        except Exception as e:
-            if not isinstance(e, socket.timeout):
-                send_error(conn, "Error receiving data from client.")
-                return None, None
-            else:
-                break
-    cmd, data = chatlib.parse_message(data)
-    return cmd, data
-
-
 def load_questions():
     """
     Loads questions bank from file	## FILE SUPPORT TO BE ADDED LATER

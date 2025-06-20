@@ -1,3 +1,4 @@
+from socket import socket
 # Protocol Constants
 
 CMD_FIELD_LENGTH = 16	# Exact length of cmd field (in bytes)
@@ -77,3 +78,26 @@ def join_data(msg_fields):
 	"""
 	return "#".join(msg_fields)
 
+def recv_message_and_parse(conn: socket):
+	"""
+	Receives a new message from the given socket,
+	then parses the message using chatlib.
+	Parameters: conn (socket object)
+	Returns: cmd (str) and data (str) of the received message.
+	If an error occurred, will return None, None
+	"""
+	try:
+		conn.settimeout(1)
+		data = ""
+		while True:
+			new_data = conn.recv(1024).decode('utf-8')
+			if len(new_data) == 0:
+				break
+			data += new_data
+
+	except Exception as e:
+		if not isinstance(e, socket.timeout):
+			return None, None
+	finally:
+		cmd, data = parse_message(data)
+	return cmd, data

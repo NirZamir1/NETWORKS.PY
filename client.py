@@ -21,34 +21,6 @@ def build_and_send_message(conn: socket.socket, code, data):
     conn.sendall(message.encode('utf-8'))
 
 
-def recv_message_and_parse(conn: socket.socket):
-    """
-    Recieves a new message from given socket,
-    then parses the message using chatlib.
-    Paramaters: conn (socket object)
-    Returns: cmd (str) and data (str) of the received message.
-    If error occured, will return None, None
-    """
-    # Implement Code
-    # ..
-    try:
-        conn.settimeout(1)  # Set a timeout for receiving data
-        data = ""
-        while True:
-            new_data = conn.recv(1024).decode('utf-8')
-            print(f"Received data: {new_data}")
-            if len(new_data) == 0:
-                break
-            data += new_data
-
-    except Exception as e:
-        if not isinstance(e, socket.timeout):
-            return None, None
-    finally:
-        cmd, data = chatlib.parse_message(data)
-    return cmd, data
-
-
 def connect():
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -74,7 +46,7 @@ def login(conn):
         password = input("Please enter password: \n")
         build_and_send_message(
             conn, chatlib.PROTOCOL_CLIENT["login_msg"], chatlib.join_data([username, password]))
-        cmd, data = recv_message_and_parse(conn)
+        cmd, data = chatlib.recv_message_and_parse(conn)
         if cmd == chatlib.PROTOCOL_SERVER["login_ok_msg"]:
             print("Login successful!")
             return
