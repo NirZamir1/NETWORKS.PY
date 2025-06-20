@@ -19,7 +19,7 @@ PROTOCOL_CLIENT = {
 
 PROTOCOL_SERVER = {
 "login_ok_msg" : "LOGIN_OK",
-"login_failed_msg" : "ERROR"
+"error_msg" : "ERROR"
 } # ..  Add more commands if needed
 
 

@@ -73,7 +73,7 @@ def login(conn):
         username = input("Please enter username: \n")
         password = input("Please enter password: \n")
         build_and_send_message(
-            conn, chatlib.PROTOCOL_CLIENT["login_msg"], f"{username}#{password}")
+            conn, chatlib.PROTOCOL_CLIENT["login_msg"], chatlib.join_data([username, password]))
         cmd, data = recv_message_and_parse(conn)
         if cmd == chatlib.PROTOCOL_SERVER["login_ok_msg"]:
             print("Login successful!")
