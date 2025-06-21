@@ -16,12 +16,6 @@ SERVER_IP = "127.0.0.1"
 
 # HELPER SOCKET METHODS
 
-def build_and_send_message(conn, code, msg):
-    # copy from client
-    message = chatlib.build_message(code, msg)
-    conn.sendall(message.encode())
-    print("[SERVER] ", message)	  # Debug print
-
 
 def load_questions():
     """
@@ -72,7 +66,7 @@ def send_error(conn: socket.socket, error_msg):
     Recieves: socket, message error string from called function
     Returns: None
     """
-    build_and_send_message(
+    chatlib.build_and_send_message(
         conn, chatlib.PROTOCOL_SERVER["error_msg"], f"{ERROR_MSG} {error_msg}")
 
 # MESSAGE HANDLING
@@ -124,7 +118,7 @@ def handle_login_message(conn, data):
 
     hostname = conn.getpeername()[0]
     logged_users[hostname] = username
-    build_and_send_message(
+    chatlib.build_and_send_message(
         conn, chatlib.PROTOCOL_SERVER["login_ok_msg"], "")
     print(f"[SERVER] User {username} logged in")
 

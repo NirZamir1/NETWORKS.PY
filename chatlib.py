@@ -89,3 +89,8 @@ def recv_message_and_parse(conn: socket):
 	data = conn.recv(1042).decode('utf-8')
 	cmd, data = parse_message(data)
 	return cmd, data
+
+def build_and_send_message(conn, code, msg):
+    message = chatlib.build_message(code, msg)
+    conn.sendall(message.encode())
+    print("[SERVER] ", message)

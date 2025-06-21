@@ -9,18 +9,6 @@ SERVER_PORT = 5678
 print("Client started. Connecting to server...")
 
 
-def build_and_send_message(conn: socket.socket, code, data):
-    """
-    Builds a new message using chatlib, wanted code and message.
-    Prints debug info, then sends it to the given socket.
-    Paramaters: conn (socket object), code (str), data (str)
-    Returns: Nothing
-    """
-    message = chatlib.build_message(code, data)
-    print(f"Sending message: {message}")
-    conn.sendall(message.encode('utf-8'))
-
-
 def connect():
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -44,7 +32,7 @@ def login(conn):
     while True:
         username = input("Please enter username: \n")
         password = input("Please enter password: \n")
-        build_and_send_message(
+        chatlib.build_and_send_message(
             conn, chatlib.PROTOCOL_CLIENT["login_msg"], chatlib.join_data([username, password]))
 
         cmd, data = chatlib.recv_message_and_parse(conn)
@@ -52,13 +40,14 @@ def login(conn):
             print("Login successful!")
             return
         elif cmd == chatlib.PROTOCOL_SERVER["error_msg"]:
-            print(f"{cmd} - {data}")
+            print(f"{cmd}")
         else:
             error_and_exit(f"Unexpected response from server: {cmd}, {data}")
 
 
 def logout(conn):
-    build_and_send_message(conn, chatlib.PROTOCOL_CLIENT["logout_msg"], "")
+    chatlib.build_and_send_message(
+        conn, chatlib.PROTOCOL_CLIENT["logout_msg"], "")
 
 
 def main():
