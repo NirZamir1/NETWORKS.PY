@@ -46,12 +46,13 @@ def login(conn):
         password = input("Please enter password: \n")
         build_and_send_message(
             conn, chatlib.PROTOCOL_CLIENT["login_msg"], chatlib.join_data([username, password]))
+
         cmd, data = chatlib.recv_message_and_parse(conn)
         if cmd == chatlib.PROTOCOL_SERVER["login_ok_msg"]:
             print("Login successful!")
             return
-        elif cmd == chatlib.PROTOCOL_SERVER["login_failed_msg"]:
-            print("Login failed. Please try again.")
+        elif cmd == chatlib.PROTOCOL_SERVER["error_msg"]:
+            print(f"{cmd} - {data}")
         else:
             error_and_exit(f"Unexpected response from server: {cmd}, {data}")
 

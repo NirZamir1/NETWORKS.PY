@@ -1,4 +1,4 @@
-from socket import socket
+from socket import socket, timeout
 # Protocol Constants
 
 CMD_FIELD_LENGTH = 16	# Exact length of cmd field (in bytes)
@@ -66,7 +66,7 @@ def split_data(msg: str, expected_fields):
 	"""
 	# Implement code ...
 	data =msg.split("#")
-	if len(msg) != expected_fields:
+	if len(data) != expected_fields:
 		return [None]
 	return data
 
@@ -86,18 +86,6 @@ def recv_message_and_parse(conn: socket):
 	Returns: cmd (str) and data (str) of the received message.
 	If an error occurred, will return None, None
 	"""
-	try:
-		conn.settimeout(1)
-		data = ""
-		while True:
-			new_data = conn.recv(1024).decode('utf-8')
-			if len(new_data) == 0:
-				break
-			data += new_data
-
-	except Exception as e:
-		if not isinstance(e, socket.timeout):
-			return None, None
-	finally:
-		cmd, data = parse_message(data)
+	data = conn.recv(1042).decode('utf-8')
+	cmd, data = parse_message(data)
 	return cmd, data

@@ -62,8 +62,7 @@ def setup_socket():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((SERVER_IP, SERVER_PORT))
     sock.listen()
-    sock.settimeout(1)
-
+    print(f"[SERVER] Listening on {SERVER_IP}:{SERVER_PORT}...")
     return sock
 
 
@@ -93,9 +92,10 @@ def handle_logout_message(conn: socket.socket):
 
     global logged_users
     hostname = conn.getpeername()[0]
-    logged_users.pop(hostname)
+    user = logged_users.pop(hostname)
     conn.close()
-    print(f"[SERVER] Client {hostname} logged out and connection closed.")
+    print(
+        f"[SERVER] Client {hostname} User {user} logged out and connection closed.")
 
 
 def handle_login_message(conn, data):
@@ -108,13 +108,13 @@ def handle_login_message(conn, data):
     global users  # This is needed to access the same users dictionary from all functions
     global logged_users	 # To be used later
 
-    username, password = chatlib.split_data(data, 2)
+    [username, password] = chatlib.split_data(data, 2)
 
     if username is None or password is None:
         send_error(conn, "Invalid login data format.")
         return
 
-    if username not in users:
+    if username not in users.keys():
         send_error(conn, "Username does not exist.")
         return
 
@@ -136,18 +136,36 @@ def handle_client_message(conn, cmd, data):
     Returns: None
     """
     global logged_users	 # To be used later
-
+    host = conn.getpeername()[0]
+    if host not in logged_users:
+        if cmd == chatlib.PROTOCOL_CLIENT["login_msg"]:
+            handle_login_message(conn, data)
+    elif cmd == chatlib.PROTOCOL_CLIENT["logout_msg"] or (cmd is None and data is None):
+        handle_logout_message(conn)
     # Implement code ...
+
+
+def accept_connection(server_socket):
+    try:
+        conn, addr = server_socket.accept()
+        print(f"[SERVER] New connection from {addr}")
+        return conn
+    except socket.timeout:
+        return None
 
 
 def main():
     # Initializes global users and questions dicionaries using load functions, will be used later
     global users
     global questions
-
-    print("Welcome to Trivia Server!")
-
-    # Implement code ...
+    server_socket = setup_socket()
+    users = load_user_database()
+    while True:
+        conn = accept_connection(server_socket)
+        while not conn.fileno() == -1:
+            if conn:
+                cmd, data = chatlib.recv_message_and_parse(conn)
+                handle_client_message(conn, cmd, data)
 
 
 if __name__ == '__main__':
