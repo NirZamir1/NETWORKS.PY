@@ -4,11 +4,14 @@
 
 import socket
 import chatlib
+from select import select
 
 # GLOBALS
 users = {}
 questions = {}
 logged_users = {}  # a dictionary of client hostnames to usernames - will be used later
+client_sockets = []
+messages = []  # a list of messages to be sent to clients - will be used later
 ERROR_MSG = "Error! "
 SERVER_PORT = 5678
 SERVER_IP = "127.0.0.1"
@@ -66,9 +69,8 @@ def send_error(conn: socket.socket, error_msg):
     Recieves: socket, message error string from called function
     Returns: None
     """
-    chatlib.build_and_send_message(
-        conn, chatlib.PROTOCOL_SERVER["error_msg"], f"{ERROR_MSG} {error_msg}")
-
+    add_message_to_send(
+        conn, chatlib.PROTOCOL_SERVER["error_msg"], error_msg)
 # MESSAGE HANDLING
 
 
@@ -85,11 +87,17 @@ def handle_logout_message(conn: socket.socket):
     """
 
     global logged_users
-    hostname = conn.getpeername()[0]
+    hostname = conn.getpeername()
     user = logged_users.pop(hostname)
     conn.close()
+    client_sockets.remove(conn)
     print(
         f"[SERVER] Client {hostname} User {user} logged out and connection closed.")
+
+
+def add_message_to_send(conn, cmd, data):
+    messages.append(
+        {"sock": conn, "cmd": cmd, "msg": data})
 
 
 def handle_login_message(conn, data):
@@ -116,10 +124,11 @@ def handle_login_message(conn, data):
         send_error(conn, "Incorrect password.")
         return
 
-    hostname = conn.getpeername()[0]
+    hostname = conn.getpeername()
     logged_users[hostname] = username
-    chatlib.build_and_send_message(
+    add_message_to_send(
         conn, chatlib.PROTOCOL_SERVER["login_ok_msg"], "")
+
     print(f"[SERVER] User {username} logged in")
 
 
@@ -130,7 +139,7 @@ def handle_client_message(conn, cmd, data):
     Returns: None
     """
     global logged_users	 # To be used later
-    host = conn.getpeername()[0]
+    host = conn.getpeername()
     if host not in logged_users:
         if cmd == chatlib.PROTOCOL_CLIENT["login_msg"]:
             handle_login_message(conn, data)
@@ -155,11 +164,24 @@ def main():
     server_socket = setup_socket()
     users = load_user_database()
     while True:
-        conn = accept_connection(server_socket)
-        while not conn.fileno() == -1:
-            if conn:
-                cmd, data = chatlib.recv_message_and_parse(conn)
-                handle_client_message(conn, cmd, data)
+        read_list, write_list, exception_list = select(
+            [server_socket] + client_sockets, client_sockets, [])
+        for sock in read_list:
+            if sock is server_socket:
+                conn = accept_connection(server_socket)
+                if conn:
+                    client_sockets.append(conn)
+            else:
+                cmd, data = chatlib.recv_message_and_parse(sock)
+                handle_client_message(sock, cmd, data)
+
+        for message in messages:
+            conn = message["sock"]
+            cmd = message["cmd"]
+            data = message["msg"]
+            if conn in write_list:
+                chatlib.build_and_send_message(conn, cmd, data)
+                messages.remove(message)
 
 
 if __name__ == '__main__':
